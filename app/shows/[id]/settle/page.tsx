@@ -23,10 +23,7 @@ import {
 } from "@/components/ui/card";
 import { StatusBadge, DealTypeBadge, PlainBadge } from "@/components/ui/badge";
 import { calculateSettlement } from "@/lib/dealMath";
-import {
-  formatMoney,
-  formatShowDateFull,
-} from "@/lib/format";
+import { formatMoney, formatShowDateFull } from "@/lib/format";
 import type { Settlement, Recoup, Deal } from "@/db/schema";
 import { Logomark } from "@/components/brand/logo";
 
@@ -75,18 +72,23 @@ export default async function SettlePage({
     .reduce((sum, e) => sum + e.amount, 0);
 
   const disputedRecoups = recoups.filter((r) => r.status === "disputed");
-  const isDisputed = settlement?.status === "disputed" || settlement?.status === "revised" || !!settlement?.disputedAt;
+  const isDisputed =
+    settlement?.status === "disputed" ||
+    settlement?.status === "revised" ||
+    !!settlement?.disputedAt;
   const disputedRecoupValue = disputedRecoups.reduce((s, r) => s + r.amount, 0);
   const readinessIssues = getSettlementReadinessIssues({
     deal,
     settlement,
     totalExpenses,
   });
-  
+
   const hasReadinessIssues = readinessIssues.length > 0;
 
   return (
-    <div className={`px-12 py-10 max-w-7xl ${isDisputed ? "bg-gradient-to-b from-rose-50/30 via-canvas to-canvas" : ""}`}>
+    <div
+      className={`px-12 py-10 max-w-7xl ${isDisputed ? "bg-gradient-to-b from-rose-50/30 via-canvas to-canvas" : ""}`}
+    >
       <BackLink showId={show.id} />
 
       <div className="mb-20">
@@ -106,7 +108,10 @@ export default async function SettlePage({
             <PlainBadge variant="default">Voided</PlainBadge>
           )}
         </div>
-        <h1 className="font-display text-[48px] font-medium text-ink-900 leading-[1.05]" style={{ letterSpacing: "-0.02em", fontOpticalSizing: "auto" }}>
+        <h1
+          className="font-display text-[48px] font-medium text-ink-900 leading-[1.05]"
+          style={{ letterSpacing: "-0.02em", fontOpticalSizing: "auto" }}
+        >
           Settlement · {artist?.name}
         </h1>
         <div className="text-[14px] text-ink-400 mt-3">
@@ -120,69 +125,79 @@ export default async function SettlePage({
           <AlertTriangle className="h-4 w-4 text-rose-700 mt-0.5 shrink-0" />
           <div>
             <div className="text-[13px] font-semibold text-rose-800">
-              {disputedRecoups.length} recoup{disputedRecoups.length === 1 ? "" : "s"} in dispute · {formatMoney(disputedRecoupValue)} contested
+              {disputedRecoups.length} recoup
+              {disputedRecoups.length === 1 ? "" : "s"} in dispute ·{" "}
+              {formatMoney(disputedRecoupValue)} contested
             </div>
             <p className="text-[12.5px] text-ink-600 mt-1 leading-relaxed">
-              The artist team has flagged recoup line items. This settlement cannot be finalized until the dispute is resolved.
+              The artist team has flagged recoup line items. This settlement
+              cannot be finalized until the dispute is resolved.
             </p>
           </div>
         </div>
       )}
 
       {settlement && (
-        <LifecycleBar settlement={settlement} disputedRecoups={disputedRecoups.length} />
+        <LifecycleBar
+          settlement={settlement}
+          disputedRecoups={disputedRecoups.length}
+        />
       )}
 
       <div className="space-y-6 mt-6">
-      <Card accent="amber">
-    <CardHeader>
-      <div>
-        <CardTitle>Settlement readiness check</CardTitle>
-        <CardDescription>
-          Greenroom found issues that may create friction before this settlement can be trusted at 2am.
-        </CardDescription>
-      </div>
-      <PlainBadge variant={hasReadinessIssues ? "rose" : "brand"}>
-        {hasReadinessIssues ? "Needs review" : "Ready"}
-      </PlainBadge>
-    </CardHeader>
-    <CardContent className="space-y-3">
-    {hasReadinessIssues ? (
-  readinessIssues.map((issue) => (
-    <div
-      key={issue.title}
-      className={`rounded-lg p-4 ring-1 ${
-        issue.severity === "rose"
-          ? "bg-rose-50/50 ring-rose-200/80"
-          : issue.severity === "amber"
-            ? "bg-amber-50/50 ring-amber-200/80"
-            : "bg-canvas-soft ring-ink-200/60"
-      }`}
-    >
-        <div className="text-[13px] font-medium text-ink-900">
-          {issue.title}
-        </div>
-        <div className="text-[12.5px] text-ink-600 mt-1 leading-relaxed">
-          {issue.body}
-        </div>
-        <div className="text-[11.5px] text-ink-500 mt-2 leading-relaxed">
-  <span className="font-medium text-ink-700">Next action:</span>{" "}
-  {issue.action}
-</div>
-      </div>
-    ))
-  ) : (
-    <div className="rounded-lg bg-canvas-soft p-4 ring-1 ring-ink-200/60">
-      <div className="text-[13px] font-medium text-ink-900">
-        No readiness issues found
-      </div>
-      <div className="text-[12.5px] text-ink-600 mt-1 leading-relaxed">
-        Greenroom can explain the supported settlement math for this deal based on the structured fields available.
-      </div>
-    </div>
-  )}
-</CardContent>
-  </Card>
+        <Card accent="amber">
+          <CardHeader>
+            <div>
+              <CardTitle>Settlement readiness check</CardTitle>
+              <CardDescription>
+                Greenroom found issues that may create friction before this
+                settlement can be trusted at 2am.
+              </CardDescription>
+            </div>
+            <PlainBadge variant={hasReadinessIssues ? "rose" : "brand"}>
+              {hasReadinessIssues ? "Needs review" : "Ready"}
+            </PlainBadge>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {hasReadinessIssues ? (
+              readinessIssues.map((issue) => (
+                <div
+                  key={issue.title}
+                  className={`rounded-lg p-4 ring-1 ${
+                    issue.severity === "rose"
+                      ? "bg-rose-50/50 ring-rose-200/80"
+                      : issue.severity === "amber"
+                        ? "bg-amber-50/50 ring-amber-200/80"
+                        : "bg-canvas-soft ring-ink-200/60"
+                  }`}
+                >
+                  <div className="text-[13px] font-medium text-ink-900">
+                    {issue.title}
+                  </div>
+                  <div className="text-[12.5px] text-ink-600 mt-1 leading-relaxed">
+                    {issue.body}
+                  </div>
+                  <div className="text-[11.5px] text-ink-500 mt-2 leading-relaxed">
+                    <span className="font-medium text-ink-700">
+                      Next action:
+                    </span>{" "}
+                    {issue.action}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-lg bg-canvas-soft p-4 ring-1 ring-ink-200/60">
+                <div className="text-[13px] font-medium text-ink-900">
+                  No readiness issues found
+                </div>
+                <div className="text-[12.5px] text-ink-600 mt-1 leading-relaxed">
+                  Greenroom can explain the supported settlement math for this
+                  deal based on the structured fields available.
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
         {!calc.supported ? (
           <UnsupportedDeal
             dealType={calc.dealType}
@@ -209,7 +224,10 @@ export default async function SettlePage({
         <div className="flex gap-4 items-start max-w-3xl">
           <Logomark size={40} className="shrink-0" />
           <div>
-            <h2 className="font-display text-[20px] font-medium text-ink-900 mb-2" style={{ letterSpacing: "-0.02em" }}>
+            <h2
+              className="font-display text-[20px] font-medium text-ink-900 mb-2"
+              style={{ letterSpacing: "-0.02em" }}
+            >
               You&apos;re looking at the seam this case study is about.
             </h2>
             <p className="text-[13px] text-ink-500 leading-relaxed">
@@ -435,7 +453,8 @@ function getSettlementReadinessIssues({
     issues.push({
       title: "Unsupported settlement math",
       body: "This deal type cannot be settled in-app yet, so Mariana still has to leave Greenroom and use a spreadsheet.",
-      action: "Run this settlement in the spreadsheet workflow, then log the final amount back into Greenroom.",
+      action:
+        "Run this settlement in the spreadsheet workflow, then log the final amount back into Greenroom.",
       severity: "amber",
     });
   }
@@ -461,7 +480,8 @@ function getSettlementReadinessIssues({
     issues.push({
       title: "Expense cap explanation needed",
       body: `Passed-through expenses total ${formatMoney(totalExpenses)}, above the ${formatMoney(deal.expenseCap)} cap. Only ${formatMoney(deductibleExpenses)} should be deducted from the settlement; the remaining ${formatMoney(venueAbsorbedOverage)} is venue-absorbed and should be explained before this is sent for sign-off.`,
-      action: "Confirm the artist-facing deduction and venue-absorbed overage before sending for sign-off.",
+      action:
+        "Confirm the artist-facing deduction and venue-absorbed overage before sending for sign-off.",
       severity: "amber",
     });
   }
@@ -470,7 +490,8 @@ function getSettlementReadinessIssues({
     issues.push({
       title: "Recoup ambiguity risk",
       body: "The deal notes mention a recoup. Clarify whether it sits inside or outside the expense cap before the settlement conversation.",
-      action: "Clarify whether the recoup is inside or outside the expense cap.",
+      action:
+        "Clarify whether the recoup is inside or outside the expense cap.",
       severity: "rose",
     });
   }
@@ -483,7 +504,8 @@ function getSettlementReadinessIssues({
     issues.push({
       title: "Complex term living in prose",
       body: "The free-text deal notes include bonus, escalator, tier, or ratchet language. Confirm the structured fields fully capture this before settlement.",
-      action: "Review the free-text term against the structured deal fields before relying on the worksheet.",
+      action:
+        "Review the free-text term against the structured deal fields before relying on the worksheet.",
       severity: "amber",
     });
   }
@@ -526,24 +548,28 @@ function UnsupportedDeal({
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 ring-1 ring-amber-200/80 mb-5">
             <FileWarning className="h-5 w-5 text-amber-700" />
           </div>
-          <h2 className="font-display text-[22px] font-medium text-ink-900 mb-2" style={{ letterSpacing: "-0.02em" }}>
-            The in-app tool can&apos;t settle a {friendly[dealType] ?? dealType} yet.
+          <h2
+            className="font-display text-[22px] font-medium text-ink-900 mb-2"
+            style={{ letterSpacing: "-0.02em" }}
+          >
+            The in-app tool can&apos;t settle a {friendly[dealType] ?? dealType}{" "}
+            yet.
           </h2>
           <p className="text-[13px] text-ink-500 max-w-md mx-auto leading-relaxed">
-  Mariana would do this on a Google Sheet at 2am tonight. Greenroom has
-  the inputs, but it cannot yet produce a settlement Mariana can trust,
-  explain, sign, or pay from this screen.
-</p>
+            Mariana would do this on a Google Sheet at 2am tonight. Greenroom
+            has the inputs, but it cannot yet produce a settlement Mariana can
+            trust, explain, sign, or pay from this screen.
+          </p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
           <div>
-          <CardDescription>
-  The raw settlement inputs are present, but Greenroom has not connected them
-  into a supported calculation for this deal type.
-</CardDescription>
+            <CardDescription>
+              The raw settlement inputs are present, but Greenroom has not
+              connected them into a supported calculation for this deal type.
+            </CardDescription>
           </div>
         </CardHeader>
         <CardContent>
@@ -578,8 +604,8 @@ function UnsupportedDeal({
           {deal?.dealNotesFreetext && (
             <div className="mt-6">
               <div className="eyebrow text-[10px] text-ink-500 mb-2">
-  Deal notes (free text terms not fully structured)
-</div>
+                Deal notes (free text terms not fully structured)
+              </div>
               <div className="text-[12.5px] text-ink-800 bg-canvas-soft rounded-lg p-4 ring-1 ring-ink-200/60 leading-relaxed">
                 {deal.dealNotesFreetext}
               </div>
@@ -596,8 +622,9 @@ function UnsupportedDeal({
             <div>
               <CardTitle>Actually settled (off-platform)</CardTitle>
               <CardDescription>
-  Mariana completed the trusted calculation outside Greenroom, then logged the final result back into the system.
-</CardDescription>
+                Mariana completed the trusted calculation outside Greenroom,
+                then logged the final result back into the system.
+              </CardDescription>
             </div>
             {existingSettlement.status === "disputed" ? (
               <PlainBadge variant="rose">Disputed</PlainBadge>
@@ -608,7 +635,10 @@ function UnsupportedDeal({
           <CardContent>
             <div className="flex items-baseline justify-between py-2">
               <span className="text-[13px] text-ink-600">Total to artist</span>
-              <span className="text-[32px] font-mono tabular font-semibold text-ink-900" style={{ letterSpacing: "-0.02em" }}>
+              <span
+                className="text-[32px] font-mono tabular font-semibold text-ink-900"
+                style={{ letterSpacing: "-0.02em" }}
+              >
                 {formatMoney(existingSettlement.totalToArtist)}
               </span>
             </div>
@@ -623,10 +653,7 @@ function SupportedSettlement({
   calc,
   existingSettlement,
 }: {
-  calc: Extract<
-    ReturnType<typeof calculateSettlement>,
-    { supported: true }
-  >;
+  calc: Extract<ReturnType<typeof calculateSettlement>, { supported: true }>;
   existingSettlement: NonNullable<
     Awaited<ReturnType<typeof getShowById>>
   >["settlement"];
@@ -635,7 +662,9 @@ function SupportedSettlement({
     <>
       {/* Hero number */}
       <div className="text-center py-10 mb-2">
-        <div className="eyebrow text-[10px] text-ink-400 mb-3">Total to artist</div>
+        <div className="eyebrow text-[10px] text-ink-400 mb-3">
+          Total to artist
+        </div>
         <div
           className="text-[72px] font-mono tabular font-bold text-ink-900 leading-none"
           style={{ letterSpacing: "-0.03em" }}
@@ -656,13 +685,13 @@ function SupportedSettlement({
         )}
         {existingSettlement?.totalToArtist != null &&
           existingSettlement.totalToArtist !== calc.totalToArtist && (
-          <div className="text-[12px] text-ink-400 mt-2">
-            Originally settled at{" "}
-            <span className="font-mono tabular text-ink-600">
-              {formatMoney(existingSettlement.totalToArtist)}
-            </span>
-          </div>
-        )}
+            <div className="text-[12px] text-ink-400 mt-2">
+              Originally settled at{" "}
+              <span className="font-mono tabular text-ink-600">
+                {formatMoney(existingSettlement.totalToArtist)}
+              </span>
+            </div>
+          )}
       </div>
 
       {/* Worksheet breakdown */}
