@@ -27,7 +27,7 @@ import {
   formatMoney,
   formatShowDateFull,
 } from "@/lib/format";
-import type { Settlement, Recoup } from "@/db/schema";
+import type { Settlement, Recoup, Deal } from "@/db/schema";
 import { Logomark } from "@/components/brand/logo";
 
 const RECOUP_LABELS: Record<Recoup["category"], string> = {
@@ -77,6 +77,13 @@ export default async function SettlePage({
   const disputedRecoups = recoups.filter((r) => r.status === "disputed");
   const isDisputed = settlement?.status === "disputed" || settlement?.status === "revised" || !!settlement?.disputedAt;
   const disputedRecoupValue = disputedRecoups.reduce((s, r) => s + r.amount, 0);
+  const readinessIssues = getSettlementReadinessIssues({
+    deal,
+    settlement,
+    totalExpenses,
+  });
+  
+  const hasReadinessIssues = readinessIssues.length > 0;
 
   return (
     <div className={`px-12 py-10 max-w-7xl ${isDisputed ? "bg-gradient-to-b from-rose-50/30 via-canvas to-canvas" : ""}`}>
@@ -127,6 +134,55 @@ export default async function SettlePage({
       )}
 
       <div className="space-y-6 mt-6">
+      <Card accent="amber">
+    <CardHeader>
+      <div>
+        <CardTitle>Settlement readiness check</CardTitle>
+        <CardDescription>
+          Greenroom found issues that may create friction before this settlement can be trusted at 2am.
+        </CardDescription>
+      </div>
+      <PlainBadge variant={hasReadinessIssues ? "rose" : "brand"}>
+        {hasReadinessIssues ? "Needs review" : "Ready"}
+      </PlainBadge>
+    </CardHeader>
+    <CardContent className="space-y-3">
+    {hasReadinessIssues ? (
+  readinessIssues.map((issue) => (
+    <div
+      key={issue.title}
+      className={`rounded-lg p-4 ring-1 ${
+        issue.severity === "rose"
+          ? "bg-rose-50/50 ring-rose-200/80"
+          : issue.severity === "amber"
+            ? "bg-amber-50/50 ring-amber-200/80"
+            : "bg-canvas-soft ring-ink-200/60"
+      }`}
+    >
+        <div className="text-[13px] font-medium text-ink-900">
+          {issue.title}
+        </div>
+        <div className="text-[12.5px] text-ink-600 mt-1 leading-relaxed">
+          {issue.body}
+        </div>
+        <div className="text-[11.5px] text-ink-500 mt-2 leading-relaxed">
+  <span className="font-medium text-ink-700">Next action:</span>{" "}
+  {issue.action}
+</div>
+      </div>
+    ))
+  ) : (
+    <div className="rounded-lg bg-canvas-soft p-4 ring-1 ring-ink-200/60">
+      <div className="text-[13px] font-medium text-ink-900">
+        No readiness issues found
+      </div>
+      <div className="text-[12.5px] text-ink-600 mt-1 leading-relaxed">
+        Greenroom can explain the supported settlement math for this deal based on the structured fields available.
+      </div>
+    </div>
+  )}
+</CardContent>
+  </Card>
         {!calc.supported ? (
           <UnsupportedDeal
             dealType={calc.dealType}
@@ -355,6 +411,85 @@ function LifecycleBar({
   );
 }
 
+type ReadinessIssue = {
+  title: string;
+  body: string;
+  action: string;
+  severity: "rose" | "amber" | "brand";
+};
+
+function getSettlementReadinessIssues({
+  deal,
+  settlement,
+  totalExpenses,
+}: {
+  deal: Deal;
+  settlement: Settlement | null;
+  totalExpenses: number;
+}): ReadinessIssue[] {
+  const issues: ReadinessIssue[] = [];
+  const notes = deal.dealNotesFreetext?.toLowerCase() ?? "";
+  const signoff = settlement?.signoffText?.toLowerCase() ?? "";
+
+  if (["vs", "percentage_of_net", "door"].includes(deal.dealType)) {
+    issues.push({
+      title: "Unsupported settlement math",
+      body: "This deal type cannot be settled in-app yet, so Mariana still has to leave Greenroom and use a spreadsheet.",
+      action: "Run this settlement in the spreadsheet workflow, then log the final amount back into Greenroom.",
+      severity: "amber",
+    });
+  }
+
+  if (
+    settlement?.status === "disputed" &&
+    ["looks good", "ok", "okay", "👍", "good night"].some((phrase) =>
+      signoff.includes(phrase),
+    )
+  ) {
+    issues.push({
+      title: "Resolved-in-practice status mismatch",
+      body: "This settlement is still marked disputed, but the artist-team sign-off suggests the parties may have accepted a resolution. Mariana should confirm whether the dispute is truly open, revised, or paid before relying on this status.",
+      action: "Confirm the settlement status before treating this as final.",
+      severity: "rose",
+    });
+  }
+
+  if (deal.expenseCap != null && totalExpenses > deal.expenseCap) {
+    const deductibleExpenses = Math.min(totalExpenses, deal.expenseCap);
+    const venueAbsorbedOverage = totalExpenses - deductibleExpenses;
+
+    issues.push({
+      title: "Expense cap explanation needed",
+      body: `Passed-through expenses total ${formatMoney(totalExpenses)}, above the ${formatMoney(deal.expenseCap)} cap. Only ${formatMoney(deductibleExpenses)} should be deducted from the settlement; the remaining ${formatMoney(venueAbsorbedOverage)} is venue-absorbed and should be explained before this is sent for sign-off.`,
+      action: "Confirm the artist-facing deduction and venue-absorbed overage before sending for sign-off.",
+      severity: "amber",
+    });
+  }
+
+  if (notes.includes("recoup")) {
+    issues.push({
+      title: "Recoup ambiguity risk",
+      body: "The deal notes mention a recoup. Clarify whether it sits inside or outside the expense cap before the settlement conversation.",
+      action: "Clarify whether the recoup is inside or outside the expense cap.",
+      severity: "rose",
+    });
+  }
+
+  if (
+    ["ratchet", "escalator", "bonus", "tier"].some((term) =>
+      notes.includes(term),
+    )
+  ) {
+    issues.push({
+      title: "Complex term living in prose",
+      body: "The free-text deal notes include bonus, escalator, tier, or ratchet language. Confirm the structured fields fully capture this before settlement.",
+      action: "Review the free-text term against the structured deal fields before relying on the worksheet.",
+      severity: "amber",
+    });
+  }
+
+  return issues;
+}
 function UnsupportedDeal({
   dealType,
   deal,
@@ -395,20 +530,20 @@ function UnsupportedDeal({
             The in-app tool can&apos;t settle a {friendly[dealType] ?? dealType} yet.
           </h2>
           <p className="text-[13px] text-ink-500 max-w-md mx-auto leading-relaxed">
-            Mariana would do this on a Google Sheet at 2am tonight. The inputs
-            are below — but the math doesn&apos;t happen here.
-          </p>
+  Mariana would do this on a Google Sheet at 2am tonight. Greenroom has
+  the inputs, but it cannot yet produce a settlement Mariana can trust,
+  explain, sign, or pay from this screen.
+</p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
           <div>
-            <CardTitle>What the system has</CardTitle>
-            <CardDescription>
-              The inputs Mariana would pull together to settle this show.
-              They&apos;re here — but disconnected from the deal terms.
-            </CardDescription>
+          <CardDescription>
+  The raw settlement inputs are present, but Greenroom has not connected them
+  into a supported calculation for this deal type.
+</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
@@ -443,8 +578,8 @@ function UnsupportedDeal({
           {deal?.dealNotesFreetext && (
             <div className="mt-6">
               <div className="eyebrow text-[10px] text-ink-500 mb-2">
-                Deal notes (free text — what Mariana actually trusts)
-              </div>
+  Deal notes (free text terms not fully structured)
+</div>
               <div className="text-[12.5px] text-ink-800 bg-canvas-soft rounded-lg p-4 ring-1 ring-ink-200/60 leading-relaxed">
                 {deal.dealNotesFreetext}
               </div>
@@ -461,9 +596,8 @@ function UnsupportedDeal({
             <div>
               <CardTitle>Actually settled (off-platform)</CardTitle>
               <CardDescription>
-                Mariana ran this in a spreadsheet. Here&apos;s the result that
-                was logged back into Greenroom afterward.
-              </CardDescription>
+  Mariana completed the trusted calculation outside Greenroom, then logged the final result back into the system.
+</CardDescription>
             </div>
             {existingSettlement.status === "disputed" ? (
               <PlainBadge variant="rose">Disputed</PlainBadge>
